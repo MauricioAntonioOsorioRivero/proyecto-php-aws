@@ -4,13 +4,18 @@ include("setup/setup.php");
 session_start();
 
 mysqli_set_charset(conectar(), 'utf8');
+// === CORRECCIÓN 1 (seguridad - SQL Injection, afecta a TODAS las consultas que usan $key) ===
+// Antes: $key=$_GET['id']; tomaba el valor crudo de la URL y se concatenaba directo
+// en múltiples sentencias SQL a lo largo de este archivo (restaurant, destacados,
+// cartas, categorías, items, comentarios). Se castea a entero una sola vez aquí,
+// ya que "id" siempre debe ser numérico, y eso protege todas esas consultas.
 if(!isset($_GET['id']))
 {
   $key=1;
   $_SESSION['id']=1;
 }else{
-  $key=$_GET['id'];
-  $_SESSION['id']=$_GET['id'];
+  $key=intval($_GET['id']);
+  $_SESSION['id']=$key;
 }
 
 
@@ -56,7 +61,7 @@ $datos_restorant=mysqli_fetch_array($result_restorant);
       </form>
     <?php
     }else{
-      echo "Bienvenido :".$_SESSION['nombre']." - <a href=setup/cerrar_sesion.php>Cerra Sesión</a>";
+      echo "Bienvenido :".htmlspecialchars($_SESSION['nombre'], ENT_QUOTES, 'UTF-8')." - <a href=setup/cerrar_sesion.php>Cerra Sesión</a>";
     }
   ?>
 </nav>
@@ -245,7 +250,12 @@ $datos_restorant=mysqli_fetch_array($result_restorant);
                   </nav>
                   <div class="tab-content py-3 px-3 px-sm-0" id="nav-tabContent">
                     <?php
-                     for($i=0;$i<=sizeof($arraycartas);$i++)
+                     // === CORRECCIÓN 2 (bug de condición límite / boundary) ===
+                     // Antes: for($i=0;$i<=sizeof($arraycartas);$i++)
+                     // Con <=, si $arraycartas tiene N elementos (índices 0..N-1), el bucle
+                     // intentaba acceder además a $arraycartas[N], que no existe, generando
+                     // "Undefined array key" y rompiendo el renderizado de la última pestaña.
+                     for($i=0;$i<sizeof($arraycartas);$i++)
                      {                             
                     ?>
                     <div class="tab-pane fade <?php if($i==0){?>show active<?php } ?>" id="<?php echo quitarespacios($arraycartas[$i]["nombre"]);?>" role="tabpanel" aria-labelledby="nav-<?php echo quitarespacios($arraycartas[$i]["nombre"]);?>-tab">              
@@ -409,6 +419,8 @@ if(isset($key))
           <br>
           <?php
 
+            // Nota: esta consulta queda protegida por la CORRECCIÓN 1 (arriba),
+            // ya que $key ahora siempre es un entero (intval), no el valor crudo de $_GET.
             $sqlcomentarios="select * from comentarios where id_restaurante=".$key;
             $resultcomentarios=mysqli_query(conectar(),$sqlcomentarios);
             while($datoscomentarios=mysqli_fetch_array($resultcomentarios))
@@ -416,9 +428,17 @@ if(isset($key))
           ?>
           <div class="card bg-light">
             <div class="card-body">
-              <b><?php echo $datoscomentarios['usuario'];?></b>
+              <!-- === CORRECCIÓN 3 (CP-COM-02 - XSS almacenado) ===
+                   Antes: <?php echo $datoscomentarios['usuario'];?> y
+                          <?php echo $datoscomentarios['comentario'];?>
+                   imprimían el contenido tal cual venía de la base de datos. Si alguien
+                   guardó un <script> en el comentario (como ya ocurrió en los datos de
+                   prueba de security.sql), ese script se ejecutaba en el navegador de
+                   cualquiera que viera la página. htmlspecialchars() convierte < > " '
+                   en sus entidades HTML, mostrando el script como texto, no ejecutándolo. -->
+              <b><?php echo htmlspecialchars($datoscomentarios['usuario'], ENT_QUOTES, 'UTF-8');?></b>
               <br>
-              <?php echo $datoscomentarios['comentario'];?>
+              <?php echo nl2br(htmlspecialchars($datoscomentarios['comentario'], ENT_QUOTES, 'UTF-8'));?>
             </div>
           </div>
           <br>

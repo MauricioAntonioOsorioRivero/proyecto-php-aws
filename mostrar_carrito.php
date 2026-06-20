@@ -2,7 +2,9 @@
 include("setup/setup.php");
 session_start();
 
-$key=$_GET['id'];
+// === CORRECCIÓN 1 (seguridad - SQL Injection) ===
+// Antes: $key=$_GET['id']; se concatenaba directo al SQL más abajo, sin sanitizar.
+$key = intval($_GET['id']);
 
 $sql_restorant="SELECT direcciones.calle, direcciones.numero, direcciones.comuna, direcciones.region, restautantes.nombre, restautantes.id, restautantes.fono, restautantes.email, restautantes.foto FROM restautantes INNER JOIN direcciones ON restautantes.direcciones_id =
 direcciones.id WHERE restautantes.id = ".$key;
@@ -93,9 +95,16 @@ $datos_restorant=mysqli_fetch_array($result_restorant);
                   </thead>
                   <tbody>
                      <?php
+                     // === CORRECCIÓN 2 (CP-CAR-03) ===
+                     // Antes: foreach ($_SESSION["carrito"] as $value) se ejecutaba directo,
+                     // sin comprobar si la clave "carrito" existía. Si el usuario llegaba aquí
+                     // sin haber agregado productos (carrito vacío/inexistente), PHP lanzaba un
+                     // Warning y la tabla no se renderizaba correctamente -> botón
+                     // "Productos Seleccionados" parecía "no funcionar".
                      $total=0;
-                     foreach ($_SESSION["carrito"] as $value) 
-                     {
+                     if(isset($_SESSION["carrito"]) && count($_SESSION["carrito"]) > 0){
+                        foreach ($_SESSION["carrito"] as $value)
+                        {
                      ?>
                      <tr>
                         <th scope="row"><?php echo $value["id"];?></th>
@@ -110,7 +119,14 @@ $datos_restorant=mysqli_fetch_array($result_restorant);
                         </td>
                      </tr>
                      <?php
-                        $total+=$value["precio"];
+                           $total+=$value["precio"];
+                        }
+                     } else {
+                     ?>
+                     <tr>
+                        <td colspan="4" style="text-align:center">No hay productos seleccionados aún.</td>
+                     </tr>
+                     <?php
                      }
                      ?>
                   </tbody>
