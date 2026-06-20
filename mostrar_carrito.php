@@ -60,7 +60,16 @@ $datos_restorant=mysqli_fetch_array($result_restorant);
         <div class="col-lg-4">
           <div class="carro">
             <div class="media float-right">
-              <a class="volver" href="index.php?id=<?php echo $_GET['keyid'];?>">
+              <a class="volver" href="index.php?id=<?php echo $key;?>">
+              <!-- === CORRECCIÓN 3 (bug nuevo encontrado en pruebas) ===
+                   Antes: href="index.php?id=<?php echo $_GET['keyid'];?>"
+                   El parametro $_GET['keyid'] NUNCA llega en la URL real
+                   (solo se manda "id" al entrar a esta pagina), por lo que
+                   siempre quedaba vacio. El boton "Volver a la Carta" generaba
+                   index.php?id= (vacio), index.php no encontraba ningun
+                   restaurant con ese id y mostraba una pagina en blanco.
+                   Ahora se usa $key, que es el mismo id de restaurant que
+                   esta pagina ya valido con intval() mas arriba. -->
               Volver a la Carta
               </a>&nbsp;&nbsp;
               <a class="limpiar" href="#">

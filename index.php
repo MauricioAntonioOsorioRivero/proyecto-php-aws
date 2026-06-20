@@ -59,6 +59,16 @@ $datos_restorant=mysqli_fetch_array($result_restorant);
         </div>
         <button type="submit" class="btn btn-outline-primary my-2 my-sm-0">Ingresar</button>
       </form>
+      <?php
+      // === CORRECCIÓN (completa el Error 1.4 de procesalogin.php) ===
+      // procesalogin.php ya redirige con ?login_error=1 cuando el login falla,
+      // pero antes nada leía ese parámetro para avisarle al usuario. Se agrega
+      // este mensaje visible, requerido por el formato de caso de prueba
+      // (columna "Resultado esperado": Mensaje de Error / Usuario o Contraseña Inválido).
+      if(isset($_GET['login_error'])){
+        echo '<span style="color:#c0392b; margin-left:10px;">Usuario y/o Contraseña Inválido</span>';
+      }
+      ?>
     <?php
     }else{
       echo "Bienvenido :".htmlspecialchars($_SESSION['nombre'], ENT_QUOTES, 'UTF-8')." - <a href=setup/cerrar_sesion.php>Cerra Sesión</a>";
